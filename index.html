@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SOHEL GROWTH PANEL</title><link rel="stylesheet" href="/style.css"></head>
+<body><div class="glow g1"></div><div class="glow g2"></div>
+<header><a class="brand" href="#"><span class="mark">✦</span><span>SOHEL<small>GROWTH PANEL</small></span></a>
+<nav><a href="#services">Services</a><a href="#dashboard">Dashboard</a><button class="btn outline" id="authBtn">Login / Register</button></nav></header>
+<main><section class="hero"><div class="eyebrow">✦ PREMIUM SOCIAL MEDIA MANAGEMENT</div><h1>Grow with <em>clarity.</em><br>Build your presence.</h1>
+<p>A polished workspace for content strategy, profile audits and compliant social media services.</p>
+<div class="actions"><a class="btn gold" href="#services">Explore Services <span>↗</span></a><button class="btn glass" id="openAuth">Get Started</button></div>
+<div class="stats"><div><b>01</b><span>One clear workspace</span></div><div><b>24/7</b><span>Account access</span></div><div><b>Secure</b><span>Protected sign-in</span></div></div></section>
+<section id="dashboard" class="panel"><div class="section-head"><div><div class="eyebrow">YOUR WORKSPACE</div><h2>Dashboard</h2></div><span class="pill" id="sessionState">Guest view</span></div>
+<div class="cards"><article class="metric"><span>Wallet balance</span><strong id="balance">Sign in</strong></article><article class="metric"><span>My orders</span><strong id="orderCount">—</strong></article><article class="metric"><span>Account</span><strong id="accountRole">Guest</strong></article></div>
+<div class="toolbar"><button class="btn gold" id="refresh">↻ Refresh</button><button class="btn outline" id="logout">Log out</button></div>
+<div id="orders" class="muted">Log in to view your orders and transactions.</div></section>
+<section id="services"><div class="section-head"><div><div class="eyebrow">CURATED OFFERINGS</div><h2>Services</h2></div><span class="pill">Transparent pricing</span></div><div id="serviceGrid" class="service-grid"></div></section>
+<section id="admin" class="panel hidden"><div class="section-head"><div><div class="eyebrow">CONTROL CENTER</div><h2>Admin console</h2></div><span class="pill gold-pill">ADMIN</span></div>
+<div class="admin-grid"><form id="serviceForm" class="form-card"><h3>Add a service</h3><input name="name" placeholder="Service name" required><input name="category" placeholder="Category" required><input name="price" type="number" min="0" placeholder="Price in paise" required><textarea name="description" placeholder="Description"></textarea><button class="btn gold">＋ Create service</button></form>
+<form id="walletForm" class="form-card"><h3>Wallet adjustment</h3><input name="user_id" type="number" placeholder="Customer user ID" required><input name="amount_cents" type="number" placeholder="Amount in paise (+/-)" required><button class="btn gold">Apply adjustment</button><small>Use only after verifying a real payment or authorized correction.</small></form></div>
+<div class="toolbar"><button class="btn outline" id="loadUsers">Load users</button><button class="btn outline" id="loadAdminOrders">Load all orders</button></div><div id="adminOutput" class="muted"></div></section></main>
+<footer>© <span id="year"></span> SOHEL GROWTH PANEL <span>•</span> Built for legitimate social media management</footer>
+<div class="modal hidden" id="authModal"><div class="modal-card"><button class="x" id="closeAuth">×</button><div class="eyebrow">WELCOME</div><h2 id="authTitle">Sign in</h2><form id="authForm"><input name="name" placeholder="Full name" class="hidden" id="nameField"><input name="email" type="email" placeholder="Email address" required><input name="password" type="password" placeholder="Password (10+ characters)" required><button class="btn gold full" id="authSubmit">Sign in</button></form><p class="muted" id="authError"></p><button class="text-btn" id="switchAuth">Create an account</button></div></div>
+<div class="toast" id="toast"></div><script src="/app.js"></script></body></html>

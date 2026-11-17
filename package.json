@@ -1,0 +1,16 @@
+{
+  "name": "sohel-growth-panel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Premium social media management dashboard starter",
+  "main": "src/server.js",
+  "scripts": {"start": "node src/server.js", "dev": "node --watch src/server.js"},
+  "engines": {"node": ">=20"},
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1",
+    "pg": "^8.13.1"
+  }
+}
