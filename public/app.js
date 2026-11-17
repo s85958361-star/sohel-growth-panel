@@ -1,364 +1,523 @@
-
 "use strict";
 
-let mode = "login";
+const $ = selector => document.querySelector(selector);
 let me = null;
+let mode = "login";
+let servicesCache = [];
 
-const $ = (s) => document.querySelector(s);
-const money = (n) => "₹" + (Number(n || 0) / 100).toFixed(2);
-
-function esc(v) {
-  return String(v ?? "").replace(/[&<>"']/g, c => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;",
-    '"': "&quot;", "'": "&#39;"
-  })[c]);
-}
+const money = cents =>
+  "₹" + (Number(cents || 0) / 100).toFixed(2);
 
 function toast(message) {
-  const el = $("#toast");
-  if (!el) return;
-  el.textContent = message;
-  el.style.display = "block";
-  clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => el.style.display = "none", 2800);
+  const box = $("#toast");
+  box.textContent = message;
+  box.classList.add("show");
+  setTimeout(() => box.classList.remove("show"), 3000);
 }
 
 async function api(url, options = {}) {
-  const r = await fetch(url, {
-    ...options,
+  const response = await fetch(url, {
     credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {})
-    }
+    },
+    ...options
   });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw Error(d.error || "Request failed");
-  return d;
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) throw new Error(data.error || "Something went wrong.");
+  return data;
+}
+
+function show(element, visible) {
+  if (element) element.classList.toggle("hidden", !visible);
 }
 
 function openAuth() {
-  $("#authModal")?.classList.remove("hidden");
+  show($("#authModal"), true);
 }
 
 function closeAuth() {
-  $("#authModal")?.classList.add("hidden");
+  show($("#authModal"), false);
+  $("#authError").textContent = "";
 }
 
-function setMode(m) {
-  mode = m;
-  $("#authTitle").textContent = m === "login" ? "Sign in" : "Create account";
-  $("#authSubmit").textContent = m === "login" ? "Sign in" : "Create account";
-  $("#nameField").classList.toggle("hidden", m === "login");
-  $("#switchAuth").textContent = m === "login"
-    ? "Create an account"
-    : "Already registered? Sign in";
+function setMode(next) {
+  mode = next;
+  const register = mode === "register";
+
+  $("#authTitle").textContent = register ? "Create Account" : "Login";
+  $("#authSubmit").textContent = register ? "Create Account" : "Login";
+  $("#switchText").textContent = register ? "Already registered?" : "New here?";
+  $("#switchAuth").textContent = register ? "Login" : "Create account";
+
+  show($("#nameField"), register);
+  show($("#referralField"), register);
   $("#authError").textContent = "";
 }
 
 function renderGuest() {
   me = null;
-  $("#sessionState").textContent = "Guest view";
-  $("#accountRole").textContent = "Guest";
-  $("#balance").textContent = "Sign in";
-  $("#orderCount").textContent = "—";
-  $("#admin").classList.add("hidden");
-  $("#orders").textContent = "Log in to view your orders and transactions.";
+  show($("#dashboard"), false);
+  show($("#wallet"), false);
+  show($("#referral"), false);
+  show($("#support"), false);
+  show($("#admin"), false);
+  show($("#menuLogout"), false);
+  show($("#menuAuth"), true);
+  $("#sessionState").textContent = "Please login to access your dashboard.";
+  $("#authBtn") && ($("#authBtn").textContent = "Login / Register");
+}
+
+function renderUser(user) {
+  me = user;
+  show($("#dashboard"), true);
+  show($("#wallet"), true);
+  show($("#referral"), true);
+  show($("#support"), true);
+  show($("#menuLogout"), true);
+  show($("#menuAuth"), false);
+  show($("#admin"), user.role === "admin");
+
+  $("#balance").textContent = money(user.wallet_cents);
+  $("#accountRole").textContent = user.role === "admin" ? "Admin" : "User";
+  $("#sessionState").textContent = "Welcome, " + user.name;
+  $("#referralCode").textContent = user.referral_code || "Not available";
+
+  refresh();
 }
 
 async function refresh() {
-  const d = await api("/api/me");
-  me = d.user || null;
+  if (!me) return;
 
-  if (!me) {
-    renderGuest();
-    return;
+  try {
+    const [profile, orderData, transactionData, paymentData] = await Promise.all([
+      api("/api/me"),
+      api("/api/orders"),
+      api("/api/transactions"),
+      api("/api/payments")
+    ]);
+
+    if (!profile.user) {
+      renderGuest();
+      return;
+    }
+
+    me = profile.user;
+    $("#balance").textContent = money(me.wallet_cents);
+    $("#orderCount").textContent = orderData.orders.length;
+
+    $("#orders").innerHTML = orderData.orders.length
+      ? orderData.orders.map(order => `
+        <div class="dataItem">
+          <strong>#${order.id} · ${escapeHtml(order.service_name || "Service")}</strong>
+          <span>${money(order.amount_cents)}</span>
+          <small>Status: ${escapeHtml(order.status)}</small>
+        </div>`).join("")
+      : "<p>No orders yet.</p>";
+
+    $("#transactions").innerHTML = transactionData.transactions.length
+      ? transactionData.transactions.map(item => `
+        <div class="dataItem">
+          <strong>${escapeHtml(item.kind)}</strong>
+          <span>${money(item.amount_cents)}</span>
+          <small>${escapeHtml(item.status)} · ${escapeHtml(item.reference || "")}</small>
+        </div>`).join("")
+      : "<p>No transactions yet.</p>";
+
+    $("#payments").innerHTML = paymentData.payments.length
+      ? paymentData.payments.map(item => `
+        <div class="dataItem">
+          <strong>Payment #${item.id}</strong>
+          <span>${money(item.amount_cents)}</span>
+          <small>${escapeHtml(item.status)} · Ref: ${escapeHtml(item.reference)}</small>
+        </div>`).join("")
+      : "<p>No payment requests yet.</p>";
+
+    await loadReferrals();
+    if (me.role === "admin") await loadAdminSummary();
+  } catch (err) {
+    toast(err.message);
   }
+}
 
-  $("#sessionState").textContent = me.email || "User";
-  $("#accountRole").textContent = me.role || "customer";
-  $("#balance").textContent = money(me.wallet_cents);
-  $("#admin").classList.toggle("hidden", me.role !== "admin");
-
-  const [orders, tx] = await Promise.all([
-    api("/api/orders"),
-    api("/api/transactions")
-  ]);
-
-  $("#orderCount").textContent = orders.length;
-
-  $("#orders").innerHTML = `
-    <h3>Recent Orders</h3>
-    ${orders.slice(0, 5).map(o => `
-      <p>#${o.id} · ${esc(o.service_name)} · ${esc(o.status)} · ${money(o.amount_cents)}</p>
-    `).join("") || "<p>No orders yet.</p>"}
-    <h3>Payment & Transaction History</h3>
-    ${tx.slice(0, 5).map(t => `
-      <p>${esc(t.kind)} · ${money(t.amount_cents)} · ${esc(t.status)}</p>
-    `).join("") || "<p>No transactions yet.</p>"}
-  `;
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;",
+    '"': "&quot;", "'": "&#039;"
+  })[char]);
 }
 
 async function loadServices() {
-  const services = await api("/api/services");
+  try {
+    const data = await api("/api/services");
+    servicesCache = data.services;
 
-  $("#serviceGrid").innerHTML = services.map(s => `
-    <article class="service">
-      <div class="symbol">✦</div>
-      <span class="pill">${esc(s.category)}</span>
-      <h3>${esc(s.name)}</h3>
-      <p>${esc(s.description)}</p>
-      <div class="price">${money(s.price_cents)}</div>
-      <button class="btn gold order" data-id="${Number(s.id)}">
-        Place request ↗
-      </button>
-    </article>
-  `).join("");
-
-  document.querySelectorAll(".order").forEach(button => {
-    button.onclick = async () => {
-      if (!me) {
-        openAuth();
-        return;
-      }
-
-      const details = prompt("Describe your request (only for accounts or content you own or manage):");
-      if (!details || details.trim().length < 3) return;
-
-      try {
-        await api("/api/orders", {
-          method: "POST",
-          body: JSON.stringify({
-            service_id: Number(button.dataset.id),
-            details: details.trim()
-          })
-        });
-        toast("Request placed successfully.");
-        await refresh();
-      } catch (e) {
-        toast(e.message);
-      }
-    };
-  });
+    $("#serviceGrid").innerHTML = data.services.map(service => `
+      <article class="serviceCard">
+        <p class="eyebrow">${escapeHtml(service.category)}</p>
+        <h3>${escapeHtml(service.name)}</h3>
+        <p>${escapeHtml(service.description)}</p>
+        <div class="serviceBottom">
+          <strong>${money(service.price_cents)}</strong>
+          <button class="primary orderBtn" data-id="${service.id}">Order</button>
+        </div>
+      </article>
+    `).join("") || "<p>No services available.</p>";
+  } catch (err) {
+    toast(err.message);
+  }
 }
 
-// AUTH BUTTONS
+async function loadReferrals() {
+  const data = await api("/api/referrals");
 
-$("#authBtn").onclick = openAuth;
-$("#openAuth").onclick = openAuth;
-$("#closeAuth").onclick = closeAuth;
+  $("#referrals").innerHTML = data.referrals.length
+    ? data.referrals.map(item => `
+      <div class="dataItem">
+        <strong>${escapeHtml(item.referred_name)}</strong>
+        <small>Joined: ${new Date(item.created_at).toLocaleDateString()}</small>
+      </div>`).join("")
+    : "<p>No referrals yet.</p>";
+}
 
-$("#switchAuth").onclick = () => {
+async function loadAdminSummary() {
+  const data = await api("/api/admin/summary");
+  $("#totalUsers").textContent = data.users;
+  $("#totalOrders").textContent = data.orders;
+  $("#pendingPayments").textContent = data.pending_payments;
+}
+
+async function loadUsers() {
+  const data = await api("/api/admin/users");
+
+  $("#usersOutput").innerHTML = data.users.map(user => `
+    <div class="dataItem">
+      <strong>${escapeHtml(user.name)} · ID ${user.id}</strong>
+      <small>${escapeHtml(user.email)} · Wallet ${money(user.wallet_cents)}</small>
+      <small>${user.blocked ? "Blocked" : "Active"} · ${escapeHtml(user.role)}</small>
+      ${user.role !== "admin" ? `
+        <button class="secondary blockUser" data-id="${user.id}" data-blocked="${!user.blocked}">
+          ${user.blocked ? "Unblock" : "Block"}
+        </button>` : ""}
+    </div>
+  `).join("") || "<p>No users.</p>";
+}
+
+async function loadAdminOrders() {
+  const data = await api("/api/admin/orders");
+
+  $("#adminOrdersOutput").innerHTML = data.orders.map(order => `
+    <div class="dataItem">
+      <strong>Order #${order.id} · ${escapeHtml(order.service_name || "Service")}</strong>
+      <small>${escapeHtml(order.user_name)} (${escapeHtml(order.email)})</small>
+      <small>${escapeHtml(order.details)}</small>
+      <small>${money(order.amount_cents)} · ${escapeHtml(order.status)}</small>
+      <select class="orderStatus" data-id="${order.id}">
+        ${["pending","processing","completed","cancelled"].map(status =>
+          `<option value="${status}" ${order.status === status ? "selected" : ""}>${status}</option>`
+        ).join("")}
+      </select>
+      <button class="secondary saveOrder" data-id="${order.id}">Update</button>
+    </div>
+  `).join("") || "<p>No orders.</p>";
+}
+
+async function loadPayments() {
+  const data = await api("/api/admin/payments");
+
+  $("#adminPaymentsOutput").innerHTML = data.payments.map(payment => `
+    <div class="dataItem">
+      <strong>Payment #${payment.id} · ${money(payment.amount_cents)}</strong>
+      <small>${escapeHtml(payment.user_name)} · ${escapeHtml(payment.email)}</small>
+      <small>Reference: ${escapeHtml(payment.reference)}</small>
+      <small>Status: ${escapeHtml(payment.status)}</small>
+      ${payment.status === "pending" ? `
+        <button class="primary reviewPayment" data-id="${payment.id}" data-status="approved">Approve</button>
+        <button class="secondary reviewPayment" data-id="${payment.id}" data-status="rejected">Reject</button>` : ""}
+    </div>
+  `).join("") || "<p>No payment requests.</p>";
+}
+
+async function loadSupport() {
+  const data = await api("/api/admin/support");
+
+  $("#adminSupportOutput").innerHTML = data.messages.map(message => `
+    <div class="dataItem">
+      <strong>${escapeHtml(message.name)} · ${escapeHtml(message.email)}</strong>
+      <p>${escapeHtml(message.message)}</p>
+      <small>Status: ${escapeHtml(message.status)}</small>
+      ${message.status === "open" ? `
+        <button class="secondary closeSupport" data-id="${message.id}">Close Message</button>` : ""}
+    </div>
+  `).join("") || "<p>No messages.</p>";
+}
+
+// AUTH
+$("#openAuth").addEventListener("click", openAuth);
+$("#menuAuth").addEventListener("click", openAuth);
+$("#closeAuth").addEventListener("click", closeAuth);
+
+$("#switchAuth").addEventListener("click", () => {
   setMode(mode === "login" ? "register" : "login");
-};
+});
 
-// LOGIN / REGISTER
-
-$("#authForm").onsubmit = async (event) => {
+$("#authForm").addEventListener("submit", async event => {
   event.preventDefault();
 
-  const button = $("#authSubmit");
-  const error = $("#authError");
-  const form = new FormData(event.target);
-
-  const name = String(form.get("name") || "").trim();
-  const email = String(form.get("email") || "").trim();
-  const password = String(form.get("password") || "");
-
-  error.textContent = "";
-
-  if (mode === "register" && !name) {
-    error.textContent = "Please enter your name.";
-    return;
-  }
-
-  if (!email || !password) {
-    error.textContent = "Email and password are required.";
-    return;
-  }
-
-  if (mode === "register" && password.length < 10) {
-    error.textContent = "Password must be at least 10 characters.";
-    return;
-  }
-
-  button.disabled = true;
+  const form = new FormData(event.currentTarget);
+  const body = Object.fromEntries(form.entries());
 
   try {
-    const d = await api("/api/" + mode, {
-      method: "POST",
-      body: JSON.stringify({ name, email, password })
-    });
+    const data = await api(
+      mode === "register" ? "/api/register" : "/api/login",
+      { method: "POST", body: JSON.stringify(body) }
+    );
 
-    if (!d.user || !d.user.id) {
-      throw Error("Account information not received.");
-    }
-
-    const loggedInUser = d.user;
+    renderUser(data.user);
     closeAuth();
-    event.target.reset();
-
-    await refresh();
-
-    if (!me) {
-      throw Error("Login session was not saved. Check server session settings.");
-    }
-
-    toast("Welcome, " + (me.name || loggedInUser.name || "User"));
-  } catch (e) {
-    error.textContent = e.message;
-    openAuth();
-  } finally {
-    button.disabled = false;
+    toast("Welcome!");
+  } catch (err) {
+    $("#authError").textContent = err.message;
   }
-};
+});
 
-// LOGOUT
-
-$("#logout").onclick = async () => {
+$("#menuLogout").addEventListener("click", async () => {
   try {
     await api("/api/logout", { method: "POST" });
     renderGuest();
-    toast("Logged out successfully.");
-  } catch (e) {
-    toast(e.message);
+    toast("Logged out.");
+  } catch (err) {
+    toast(err.message);
   }
-};
+});
 
-// REFRESH
+// MENU
+$("#menuToggle").addEventListener("click", () => {
+  $("#mainMenu").classList.toggle("hidden");
+});
 
-$("#refresh").onclick = async () => {
+$("#adminMenuToggle").addEventListener("click", () => {
+  $("#adminMenu").classList.toggle("hidden");
+});
+
+// ORDER
+$("#serviceGrid").addEventListener("click", async event => {
+  const button = event.target.closest(".orderBtn");
+  if (!button) return;
+
+  if (!me) {
+    setMode("login");
+    openAuth();
+    return;
+  }
+
+  const details = prompt("Enter the details needed for this service:");
+  if (!details || !details.trim()) return;
+
   try {
+    await api("/api/orders", {
+      method: "POST",
+      body: JSON.stringify({
+        service_id: Number(button.dataset.id),
+        details: details.trim()
+      })
+    });
+    toast("Order created.");
     await refresh();
-    await loadServices();
-    toast("Dashboard refreshed.");
-  } catch (e) {
-    toast(e.message);
+  } catch (err) {
+    toast(err.message);
   }
-};
+});
 
-// ADMIN: CREATE SERVICE
-
-$("#serviceForm").onsubmit = async (event) => {
+// PAYMENT REQUEST
+$("#paymentForm").addEventListener("submit", async event => {
   event.preventDefault();
-  const f = new FormData(event.target);
+
+  const form = new FormData(event.currentTarget);
+  const body = Object.fromEntries(form.entries());
+
+  try {
+    await api("/api/payments/request", {
+      method: "POST",
+      body: JSON.stringify(body)
+    });
+    event.currentTarget.reset();
+    toast("Payment request submitted for verification.");
+    await refresh();
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
+// REFERRAL COPY
+$("#copyReferral").addEventListener("click", async () => {
+  if (!me || !me.referral_code) return toast("Please login first.");
+
+  try {
+    await navigator.clipboard.writeText(me.referral_code);
+    toast("Referral code copied.");
+  } catch {
+    toast("Copy not supported by this browser.");
+  }
+});
+
+// SUPPORT
+$("#supportForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const message = new FormData(event.currentTarget).get("message");
+
+  try {
+    await api("/api/support", {
+      method: "POST",
+      body: JSON.stringify({ message })
+    });
+    event.currentTarget.reset();
+    toast("Message sent.");
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
+// ADMIN: ADD SERVICE
+$("#serviceForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const body = Object.fromEntries(new FormData(event.currentTarget).entries());
 
   try {
     await api("/api/admin/services", {
       method: "POST",
-      body: JSON.stringify({
-        name: f.get("name"),
-        category: f.get("category"),
-        description: f.get("description"),
-        price_cents: Math.round(Number(f.get("price")) * 100)
-      })
+      body: JSON.stringify(body)
     });
-
-    event.target.reset();
+    event.currentTarget.reset();
+    toast("Service added.");
     await loadServices();
-    toast("Service created successfully.");
-  } catch (e) {
-    toast(e.message);
+  } catch (err) {
+    toast(err.message);
   }
-};
+});
 
 // ADMIN: WALLET
-
-$("#walletForm").onsubmit = async (event) => {
+$("#walletForm").addEventListener("submit", async event => {
   event.preventDefault();
-  const f = new FormData(event.target);
+  const body = Object.fromEntries(new FormData(event.currentTarget).entries());
 
   try {
     await api("/api/admin/wallet-adjust", {
       method: "POST",
-      body: JSON.stringify({
-        user_id: Number(f.get("user_id")),
-        amount_cents: Number(f.get("amount_cents"))
-      })
+      body: JSON.stringify(body)
     });
-
-    event.target.reset();
+    event.currentTarget.reset();
+    toast("Wallet updated.");
     await refresh();
-    toast("Wallet updated successfully.");
-  } catch (e) {
-    toast(e.message);
+  } catch (err) {
+    toast(err.message);
   }
-};
+});
 
-// ADMIN: USERS
+$("#loadUsers").addEventListener("click", () => loadUsers().catch(e => toast(e.message)));
+$("#loadAdminOrders").addEventListener("click", () => loadAdminOrders().catch(e => toast(e.message)));
+$("#loadPayments").addEventListener("click", () => loadPayments().catch(e => toast(e.message)));
+$("#loadSupport").addEventListener("click", () => loadSupport().catch(e => toast(e.message)));
+$("#refresh").addEventListener("click", refresh);
 
-$("#loadUsers").onclick = async () => {
+$("#usersOutput").addEventListener("click", async event => {
+  const button = event.target.closest(".blockUser");
+  if (!button) return;
+
   try {
-    const users = await api("/api/admin/users");
-
-    $("#adminOutput").innerHTML = `
-      <h3>Registered Users</h3>
-      ${users.map(u => `
-        <p>#${u.id} · ${esc(u.name)} · ${esc(u.email)} · ${money(u.wallet_cents)} · ${esc(u.role)}</p>
-      `).join("") || "<p>No users found.</p>"}
-    `;
-  } catch (e) {
-    toast(e.message);
-  }
-};
-
-// ADMIN: ORDERS
-
-$("#loadAdminOrders").onclick = async () => {
-  try {
-    const orders = await api("/api/orders");
-
-    $("#adminOutput").innerHTML = `
-      <h3>All Orders</h3>
-      ${orders.map(o => `
-        <div class="admin-order">
-          <p>#${o.id} · ${esc(o.email || "")} · ${esc(o.service_name)} · ${money(o.amount_cents)}</p>
-          <select data-order="${o.id}">
-            <option value="pending" ${o.status === "pending" ? "selected" : ""}>Pending</option>
-            <option value="processing" ${o.status === "processing" ? "selected" : ""}>Processing</option>
-            <option value="completed" ${o.status === "completed" ? "selected" : ""}>Completed</option>
-            <option value="cancelled" ${o.status === "cancelled" ? "selected" : ""}>Cancelled</option>
-          </select>
-          <button class="btn outline tiny" data-save="${o.id}">Update</button>
-        </div>
-      `).join("") || "<p>No orders found.</p>"}
-    `;
-
-    document.querySelectorAll("[data-save]").forEach(button => {
-      button.onclick = async () => {
-        const id = button.dataset.save;
-        const select = document.querySelector(`[data-order="${id}"]`);
-
-        try {
-          await api("/api/admin/orders/" + id, {
-            method: "PATCH",
-            body: JSON.stringify({ status: select.value })
-          });
-          toast("Order updated.");
-        } catch (e) {
-          toast(e.message);
-        }
-      };
+    await api(`/api/admin/users/${button.dataset.id}/block`, {
+      method: "PATCH",
+      body: JSON.stringify({ blocked: button.dataset.blocked === "true" })
     });
-  } catch (e) {
-    toast(e.message);
+    toast("User updated.");
+    await loadUsers();
+  } catch (err) {
+    toast(err.message);
   }
-};
+});
 
-// FOOTER YEAR
+$("#adminOrdersOutput").addEventListener("click", async event => {
+  const button = event.target.closest(".saveOrder");
+  if (!button) return;
+
+  const select = document.querySelector(`.orderStatus[data-id="${button.dataset.id}"]`);
+
+  try {
+    await api(`/api/admin/orders/${button.dataset.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: select.value })
+    });
+    toast("Order updated.");
+    await loadAdminOrders();
+    await refresh();
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
+$("#adminPaymentsOutput").addEventListener("click", async event => {
+  const button = event.target.closest(".reviewPayment");
+  if (!button) return;
+
+  const decision = button.dataset.status;
+  const confirmText = decision === "approved"
+    ? "Approve only after independently verifying the payment?"
+    : "Reject this payment request?";
+
+  if (!confirm(confirmText)) return;
+
+  try {
+    await api(`/api/admin/payments/${button.dataset.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: decision })
+    });
+    toast("Payment reviewed.");
+    await loadPayments();
+    await refresh();
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
+$("#adminSupportOutput").addEventListener("click", async event => {
+  const button = event.target.closest(".closeSupport");
+  if (!button) return;
+
+  try {
+    await api(`/api/admin/support/${button.dataset.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "closed" })
+    });
+    toast("Message closed.");
+    await loadSupport();
+  } catch (err) {
+    toast(err.message);
+  }
+});
 
 $("#year").textContent = new Date().getFullYear();
 
-// START APP
-
-(async () => {
+async function start() {
   setMode("login");
+  await loadServices();
 
   try {
-    await refresh();
-    await loadServices();
-  } catch (e) {
-    toast("Dashboard connection error: " + e.message);
+    const data = await api("/api/me");
+    if (data.user) renderUser(data.user);
+    else renderGuest();
+  } catch {
+    renderGuest();
   }
-})();
-  
+
+  const referralFromUrl = new URLSearchParams(location.search).get("ref");
+  if (referralFromUrl) {
+    setMode("register");
+    $("#authForm").elements.referral.value = referralFromUrl;
+  }
+}
+
+start();
+      
