@@ -1,22 +1,170 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SOHEL GROWTH PANEL</title><link rel="stylesheet" href="/style.css"></head>
-<body><div class="glow g1"></div><div class="glow g2"></div>
-<header><a class="brand" href="#"><span class="mark">✦</span><span>SOHEL<small>GROWTH PANEL</small></span></a>
-<nav><a href="#services">Services</a><a href="#dashboard">Dashboard</a><button class="btn outline" id="authBtn">Login / Register</button></nav></header>
-<main><section class="hero"><div class="eyebrow">✦ PREMIUM SOCIAL MEDIA MANAGEMENT</div><h1>Grow with <em>clarity.</em><br>Build your presence.</h1>
-<p>A polished workspace for content strategy, profile audits and compliant social media services.</p>
-<div class="actions"><a class="btn gold" href="#services">Explore Services <span>↗</span></a><button class="btn glass" id="openAuth">Get Started</button></div>
-<div class="stats"><div><b>01</b><span>One clear workspace</span></div><div><b>24/7</b><span>Account access</span></div><div><b>Secure</b><span>Protected sign-in</span></div></div></section>
-<section id="dashboard" class="panel"><div class="section-head"><div><div class="eyebrow">YOUR WORKSPACE</div><h2>Dashboard</h2></div><span class="pill" id="sessionState">Guest view</span></div>
-<div class="cards"><article class="metric"><span>Wallet balance</span><strong id="balance">Sign in</strong></article><article class="metric"><span>My orders</span><strong id="orderCount">—</strong></article><article class="metric"><span>Account</span><strong id="accountRole">Guest</strong></article></div>
-<div class="toolbar"><button class="btn gold" id="refresh">↻ Refresh</button><button class="btn outline" id="logout">Log out</button></div>
-<div id="orders" class="muted">Log in to view your orders and transactions.</div></section>
-<section id="services"><div class="section-head"><div><div class="eyebrow">CURATED OFFERINGS</div><h2>Services</h2></div><span class="pill">Transparent pricing</span></div><div id="serviceGrid" class="service-grid"></div></section>
-<section id="admin" class="panel hidden"><div class="section-head"><div><div class="eyebrow">CONTROL CENTER</div><h2>Admin console</h2></div><span class="pill gold-pill">ADMIN</span></div>
-<div class="admin-grid"><form id="serviceForm" class="form-card"><h3>Add a service</h3><input name="name" placeholder="Service name" required><input name="category" placeholder="Category" required><input name="price" type="number" min="0" placeholder="Price in paise" required><textarea name="description" placeholder="Description"></textarea><button class="btn gold">＋ Create service</button></form>
-<form id="walletForm" class="form-card"><h3>Wallet adjustment</h3><input name="user_id" type="number" placeholder="Customer user ID" required><input name="amount_cents" type="number" placeholder="Amount in paise (+/-)" required><button class="btn gold">Apply adjustment</button><small>Use only after verifying a real payment or authorized correction.</small></form></div>
-<div class="toolbar"><button class="btn outline" id="loadUsers">Load users</button><button class="btn outline" id="loadAdminOrders">Load all orders</button></div><div id="adminOutput" class="muted"></div></section></main>
-<footer>© <span id="year"></span> SOHEL GROWTH PANEL <span>•</span> Built for legitimate social media management</footer>
-<div class="modal hidden" id="authModal"><div class="modal-card"><button class="x" id="closeAuth">×</button><div class="eyebrow">WELCOME</div><h2 id="authTitle">Sign in</h2><form id="authForm"><input name="name" placeholder="Full name" class="hidden" id="nameField"><input name="email" type="email" placeholder="Email address" required><input name="password" type="password" placeholder="Password (10+ characters)" required><button class="btn gold full" id="authSubmit">Sign in</button></form><p class="muted" id="authError"></p><button class="text-btn" id="switchAuth">Create an account</button></div></div>
-<div class="toast" id="toast"></div><script src="/app.js"></script></body></html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SOHEL GROWTH PANEL</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/">SOHEL <span>GROWTH PANEL</span></a>
+  <button class="menuBtn" id="menuToggle" aria-label="Open menu">☰</button>
+</header>
+
+<nav id="mainMenu" class="menu hidden">
+  <a href="#services">Services</a>
+  <a href="#dashboard">Dashboard</a>
+  <a href="#wallet">Wallet</a>
+  <a href="#referral">Refer & Earn</a>
+  <button id="menuAuth">Login / Register</button>
+  <button id="menuLogout" class="hidden">Logout</button>
+</nav>
+
+<main class="container">
+  <section class="hero">
+    <p class="eyebrow">YOUR DIGITAL GROWTH PARTNER</p>
+    <h1>Grow Smarter.<br><span>Build Your Presence.</span></h1>
+    <p>Simple tools and professional services for your social media journey.</p>
+    <button id="openAuth" class="primary">Get Started</button>
+  </section>
+
+  <section id="dashboard" class="panel hidden">
+    <div class="sectionHead">
+      <div><p class="eyebrow">YOUR ACCOUNT</p><h2>Dashboard</h2></div>
+      <button id="refresh" class="secondary">Refresh</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><small>Wallet Balance</small><strong id="balance">₹0.00</strong></div>
+      <div class="stat"><small>Your Orders</small><strong id="orderCount">0</strong></div>
+      <div class="stat"><small>Account Type</small><strong id="accountRole">User</strong></div>
+    </div>
+    <p id="sessionState"></p>
+    <h3>My Orders</h3>
+    <div id="orders" class="dataList"></div>
+  </section>
+
+  <section id="services">
+    <div class="sectionHead">
+      <div><p class="eyebrow">WHAT WE OFFER</p><h2>Our Services</h2></div>
+    </div>
+    <div id="serviceGrid" class="grid"></div>
+  </section>
+
+  <section id="wallet" class="panel hidden">
+    <p class="eyebrow">ACCOUNT FUNDS</p>
+    <h2>Wallet & Add Money</h2>
+    <p>Submit a payment reference after making a payment. Your wallet is credited only after admin verification.</p>
+    <form id="paymentForm" class="formGrid">
+      <label>Amount (₹)<input name="amount" type="number" min="100" max="100000" required></label>
+      <label>UPI Reference / UTR<input name="reference" minlength="6" maxlength="100" required></label>
+      <button class="primary" type="submit">Submit Payment Request</button>
+    </form>
+    <h3>Payment Requests</h3>
+    <div id="payments" class="dataList"></div>
+    <h3>Transactions</h3>
+    <div id="transactions" class="dataList"></div>
+  </section>
+
+  <section id="referral" class="panel hidden">
+    <p class="eyebrow">INVITE PEOPLE</p>
+    <h2>Refer & Earn</h2>
+    <p>Share your referral code with people you know. Referral rewards, if offered, must be configured and verified by the administrator.</p>
+    <div class="refBox">
+      <strong id="referralCode">Login to view your code</strong>
+      <button id="copyReferral" class="secondary">Copy Code</button>
+    </div>
+    <h3>Referral History</h3>
+    <div id="referrals" class="dataList"></div>
+  </section>
+
+  <section id="support" class="panel hidden">
+    <p class="eyebrow">WE ARE HERE TO HELP</p>
+    <h2>Support</h2>
+    <form id="supportForm">
+      <label>Your message<textarea name="message" rows="4" required minlength="5" maxlength="2000"></textarea></label>
+      <button class="primary">Send Message</button>
+    </form>
+  </section>
+
+  <section id="admin" class="panel hidden">
+    <div class="sectionHead">
+      <div><p class="eyebrow">CONTROL CENTER</p><h2>Admin Panel</h2></div>
+      <span class="adminTag">ADMIN</span>
+    </div>
+
+    <button class="menuBtn adminMenuToggle" id="adminMenuToggle">☰ Admin Menu</button>
+    <nav id="adminMenu" class="adminMenu hidden">
+      <a href="#adminSummary">Overview</a>
+      <a href="#serviceForm">Add Service</a>
+      <a href="#adminUsers">Manage Users</a>
+      <a href="#adminOrders">Manage Orders</a>
+      <a href="#adminPayments">Payments</a>
+      <a href="#adminSupport">Support Messages</a>
+      <a href="#walletForm">Wallet Adjustment</a>
+    </nav>
+
+    <div id="adminSummary" class="stats">
+      <div class="stat"><small>Total Users</small><strong id="totalUsers">0</strong></div>
+      <div class="stat"><small>Total Orders</small><strong id="totalOrders">0</strong></div>
+      <div class="stat"><small>Pending Payments</small><strong id="pendingPayments">0</strong></div>
+    </div>
+
+    <h3>Add New Service</h3>
+    <form id="serviceForm" class="formGrid">
+      <label>Service Name<input name="name" required></label>
+      <label>Category<input name="category" required></label>
+      <label>Price in ₹<input name="price" type="number" min="0" step="0.01" required></label>
+      <label>Description<textarea name="description" rows="3"></textarea></label>
+      <button class="primary">Add Service</button>
+    </form>
+
+    <h3 id="adminUsers">Users</h3>
+    <button id="loadUsers" class="secondary">Load Users</button>
+    <div id="usersOutput" class="dataList"></div>
+
+    <h3 id="adminOrders">All Orders</h3>
+    <button id="loadAdminOrders" class="secondary">Load Orders</button>
+    <div id="adminOrdersOutput" class="dataList"></div>
+
+    <h3 id="adminPayments">Payment Requests</h3>
+    <button id="loadPayments" class="secondary">Load Payments</button>
+    <div id="adminPaymentsOutput" class="dataList"></div>
+
+    <h3>Wallet Adjustment</h3>
+    <form id="walletForm" class="formGrid">
+      <label>User ID<input name="user_id" type="number" min="1" required></label>
+      <label>Amount in ₹ (+ add / - deduct)<input name="amount" type="number" step="0.01" required></label>
+      <label>Reason<input name="note" required></label>
+      <button class="primary">Update Wallet</button>
+    </form>
+
+    <h3 id="adminSupport">Support Messages</h3>
+    <button id="loadSupport" class="secondary">Load Messages</button>
+    <div id="adminSupportOutput" class="dataList"></div>
+  </section>
+</main>
+
+<div id="authModal" class="modal hidden">
+  <div class="modalCard">
+    <button id="closeAuth" class="closeBtn" aria-label="Close">×</button>
+    <p class="eyebrow">SOHEL GROWTH PANEL</p>
+    <h2 id="authTitle">Login</h2>
+    <form id="authForm">
+      <label id="nameField" class="hidden">Full Name<input name="name" autocomplete="name"></label>
+      <label>Email<input name="email" type="email" required autocomplete="email"></label>
+      <label>Password<input name="password" type="password" minlength="10" required autocomplete="current-password"></label>
+      <label id="referralField" class="hidden">Referral Code (optional)<input name="referral"></label>
+      <p id="authError" class="error"></p>
+      <button id="authSubmit" class="primary">Login</button>
+    </form>
+    <p class="switchLine"><span id="switchText">New here?</span> <button id="switchAuth" class="textBtn">Create account</button></p>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<footer>© <span id="year"></span> SOHEL GROWTH PANEL</footer>
+<script src="/app.js" defer></script>
+</body>
+</html>
