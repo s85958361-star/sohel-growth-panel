@@ -6,6 +6,8 @@ const { Pool } = require("pg");
 const path = require("path");
 
 const app = express();
+app.set("trust proxy", 1);
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL && !process.env.DATABASE_URL.includes("localhost")
