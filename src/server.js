@@ -43,12 +43,13 @@ app.post('/api/auth/register', wrap(async (req, res) => {
         });
     }
 
-    const hash = await require('bcryptjs').hash(password, 12);
+      const hash = await require('bcryptjs').hash(password, 12);
 
-    const r = await query(
-        'INSERT INTO users(name,email,password_hash) VALUES($1,$2,$3) RETURNING id,name,email,role,balance',
-        [name.trim().slice(0, 80), e, hash]
-    );
+  const r = await query(
+    'INSERT INTO users(name,email,password_hash) VALUES($1,$2,$3) RETURNING id,name,email,role,balance',
+    [name.trim(), email_trim, hash]
+  );
+
 
     res.status(201).json({
         token: signToken(r.rows[0]),
