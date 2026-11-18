@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express'), path = require('path'), helmet = require('helmet'), rateLimit = require('express-rate-limit');
-const { initDb, query, pool } = require('.db');
+const { initDb, query, pool } = require('./db.js');
 const { requireAuth, requireAdmin, signToken } = require('./src/auth');
 const provider = require('./src/provider');
 const app = express(), PORT = process.env.PORT || 3000;
