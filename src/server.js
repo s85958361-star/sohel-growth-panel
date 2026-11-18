@@ -1,6 +1,6 @@
 process.on('uncaughtException', console.error); process.on('unhandledRejection', console.error);
 require('dotenv').config();
-app.set('trust proxy', true);
+
 const express = require('express');
 const path = require('path');
 const helmet = require('helmet');
@@ -11,6 +11,7 @@ const { requireAuth, requireAdmin, signToken } = require('./auth');
 const provider = require('./provider');
 
 const app = express();
+app.set('trust proxy', true);
 const PORT = process.env.PORT || 10000;
 
 app.use(helmet({ contentSecurityPolicy: false }));
