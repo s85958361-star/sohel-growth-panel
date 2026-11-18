@@ -525,4 +525,31 @@ app.patch('/api/admin/services/:id', requireAuth, requireAdmin, wrap(async (req,
 }));
 
 // END OF FILE
-initDb().catch
+
+async function startServer() {
+    try {
+        await initDb();
+
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`SOHEL MEDIA PANEL running on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error('Server startup failed:', error);
+        process.exit(1);
+    }
+}
+
+app.use((err, req, res, next) => {
+    console.error(err);
+
+    if (res.headersSent) {
+        return next(err);
+    }
+
+    res.status(500).json({
+        error: 'Internal Server Error'
+    });
+});
+
+startServer();
+
