@@ -2,6 +2,7 @@
 require('dotenv').config();
 
 const express = require('express');
+app.post("/test-login", (req, res) => { res.json({ ok: true }); });
 const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
