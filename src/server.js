@@ -7,7 +7,7 @@ const app = express(), PORT = process.env.PORT || 3000;
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '200kb' }));
-app.use(express.static(path.join(__dirname, ''../public')));
+app.use(express.static(path.join(__dirname, '../public')));
 app.use('/api/auth', rateLimit({ windowMs: 900000, max: 30 }));
 
 const wrap = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
