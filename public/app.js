@@ -272,10 +272,11 @@ $("#authForm").addEventListener("submit", async event => {
   const body = Object.fromEntries(form.entries());
 
   try {
-    const data = await api(
-      mode === "register" ? "/api/register" : "/api/login",
+        const data = await api(
+      mode === "register" ? "/api/auth/register" : "/api/auth/login",
       { method: "POST", body: JSON.stringify(body) }
     );
+    
 
     renderUser(data.user);
     closeAuth();
