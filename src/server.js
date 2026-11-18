@@ -35,27 +35,27 @@ app.post('/api/auth/register', wrap(async (req, res) => {
         });
     }
 
-    const e = email.trim().toLowerCase();
+    const email_trim = email.trim().toLowerCase();
 
-    if ((await query('SELECT id FROM users WHERE email=$1', [e])).rowCount) {
+    if ((await query('SELECT id FROM users WHERE email=$1', [email_trim])).rowCount) {
         return res.status(409).json({
             error: 'यह ईमेल पहले से रजिस्टर है।'
         });
     }
 
-      const hash = await require('bcryptjs').hash(password, 12);
+    const hash = await require('bcryptjs').hash(password, 12);
 
-  const r = await query(
-    'INSERT INTO users(name,email,password_hash) VALUES($1,$2,$3) RETURNING id,name,email,role,balance',
-    [name.trim(), email_trim, hash]
-  );
-
+    const r = await query(
+        'INSERT INTO users(name,email,password_hash) VALUES($1,$2,$3) RETURNING id,name,email,role,balance',
+        [name.trim(), email_trim, hash]
+    );
 
     res.status(201).json({
         token: signToken(r.rows[0]),
         user: r.rows[0]
     });
 }));
+
 
 // LOGIN
 app.post('/api/auth/login', wrap(async (req, res) => {
