@@ -2,6 +2,7 @@
 
 const $ = selector => document.querySelector(selector);
 let me = null;
+let authToken = sessionStorage.getItem("authToken") || "";
 let mode = "login";
 let servicesCache = [];
 
