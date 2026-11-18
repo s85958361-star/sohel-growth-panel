@@ -525,4 +525,5 @@ app.patch('/api/admin/services/:id', requireAuth, requireAdmin, wrap(async (req,
 }));
 
 // END OF FILE
+js initDb() .catch(err => { console.error('DB init failed:', err); process.exit(1); }); app.listen(PORT, () => { console.log('Server running on', PORT); });
     
