@@ -69,7 +69,7 @@ app.post('/api/auth/login', wrap(async (req, res) => {
     if (!u || u.role === 'blocked' || !(await require('bcryptjs').compare(body.password || '', u.password_hash))) {
         return res.status(401).json({
             error: 'ईमेल या पासवर्ड गलत है।'
-        });
+        }
     }
 
     res.json({
