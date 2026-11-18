@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 
 const express = require('express');
@@ -67,8 +66,7 @@ app.post('/api/auth/login', wrap(async (req, res) => {
 
     const u = r.rows[0];
 
-    u || u.role === 'blocked' || !(await require('bcryptjs').compare(body.password || '', u.password_hash))) {
-        
+    if (!u || u.role === 'blocked' || !(await require('bcryptjs').compare(body.password || '', u.password_hash))) {
         return res.status(401).json({
             error: 'ईमेल या पासवर्ड गलत है।'
         });
@@ -652,23 +650,7 @@ app.put('/api/admin/settings', requireAuth, requireAdmin, wrap(async (req, res) 
     res.json({ ok: true });
 }));
 
-
 // ERROR HANDLER
 app.use((e, _q, s, _n) => {
     console.error(e);
     s.status(500).json({
-        error: 'सर्वर में समस्या आई।'
-    });
-});
-
-// START SERVER
-initDb()
-    .then(() => {
-        app.listen(PORT, () => {
-            console.log(`SOHEL MEDIA PANEL running on ${PORT}`);
-        });
-    })
-    .catch(e => {
-        console.error(e);
-        process.exit(1);
-    });
