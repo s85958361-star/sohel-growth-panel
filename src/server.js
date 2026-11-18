@@ -64,7 +64,6 @@ app.post('/api/auth/login', wrap(async (req, res) => {
         [String(body.email || '').trim().toLowerCase()]
     );
 
-    const u = r.rows[0];
 
     if (!u || u.role === 'blocked' || !(await require('bcryptjs').compare(body.password || '', u.password_hash))) {
         return res.status(401).json({
