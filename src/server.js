@@ -12,7 +12,7 @@ const provider = require('./provider');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-app.post("/test-login", (req, res) => { res.json({ ok: true }); });
+
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '200kb' }));
 app.use(express.static(path.join(__dirname, '../public')));
