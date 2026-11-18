@@ -59,7 +59,7 @@ app.post('/api/auth/register', wrap(async (req, res) => {
 // LOGIN
 app.post('/api/auth/login', wrap(async (req, res) => {
     const body = req.body || {};
-console.log('Login query for email:', body.email);
+
     const r = await query(
         'SELECT * FROM users WHERE email=$1',
         [String(body.email || '').trim().toLowerCase()]
