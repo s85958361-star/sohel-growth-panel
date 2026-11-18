@@ -1,6 +1,6 @@
 process.on('uncaughtException', console.error); process.on('unhandledRejection', console.error);
 require('dotenv').config();
-
+app.set('trust proxy', true);
 const express = require('express');
 const path = require('path');
 const helmet = require('helmet');
