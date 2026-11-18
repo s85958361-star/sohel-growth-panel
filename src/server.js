@@ -652,7 +652,24 @@ app.put('/api/admin/settings', requireAuth, requireAdmin, wrap(async (req, res) 
     res.json({ ok: true });
 }));
 
+
 // ERROR HANDLER
 app.use((e, _q, s, _n) => {
     console.error(e);
-    s.status(500)
+    s.status(500).json({
+        error: 'सर्वर में समस्या आई।'
+    });
+});
+
+// START SERVER
+initDb()
+    .then(() => {
+        app.listen(PORT, () => {
+            console.log(`SOHEL MEDIA PANEL running on ${PORT}`);
+        });
+    })
+    .catch(e => {
+        console.error(e);
+        process.exit(1);
+    });
+
