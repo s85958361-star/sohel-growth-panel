@@ -11,7 +11,7 @@ const { requireAuth, requireAdmin, signToken } = require('./auth');
 const provider = require('./provider');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '200kb' }));
